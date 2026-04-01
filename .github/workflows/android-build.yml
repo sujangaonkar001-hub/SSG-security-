@@ -1,56 +1,40 @@
-name: Build Kivy Android APK
+name: Build APK
 
-on:
-  push:
-    branches:
-      - main
-  workflow_dispatch:
+permissions:
+  contents: write
 
 jobs:
   build:
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        shell: bash
-
+    runs-on: ubuntu-24.04
     steps:
-      - name: Checkout repo
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/setup-python@v5
         with:
-          python-version: "3.12"
+          python-version: '3.12'
 
-      - name: Install build dependencies
+      - name: Cache Buildozer
+        uses: actions/cache@v3
+        with:
+          path: |
+            ~/.buildozer
+            ~/.android
+          key: buildozer-${{ hashFiles('buildozer.spec') }}
+
+      - name: Install dependencies
         run: |
           sudo apt update
           sudo apt install -y \
-            openjdk-17-jdk \
-            zip \
-            unzip \
-            build-essential \
-            autoconf \
-            automake \
-            libtool \
-            pkg-config \
-            libffi-dev \
-            zlib1g-dev \
-            libssl-dev \
-            make
-          python -m pip install --upgrade pip setuptools wheel
-          python -m pip install --user buildozer cython kivy
-
-      - name: Add pip user bin to PATH
-        run: echo "$HOME/.local/bin" >> $GITHUB_PATH
+            openjdk-17-jdk zip unzip build-essential \
+            autoconf automake libtool pkg-config \
+            libffi-dev zlib1g-dev libssl-dev make
+          pip install buildozer cython kivy
 
       - name: Build APK
-        run: |
-          cd "$GITHUB_WORKSPACE"
-          buildozer android debug --verbose
+        run: buildozer android debug
 
-      - name: Upload APK artifact
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: ssg_security-apk
+          name: app-debug
           path: bin/*.apk
